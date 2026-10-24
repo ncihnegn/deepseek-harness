@@ -1,5 +1,5 @@
 /**
- * Commander adapter for the `dsh` command line.
+ * Commander adapter for a launcher's command line.
  *
  * The launcher parses only what it owns — which profile to boot, which extra
  * patch overlays to apply, and the config dumps — and hands **everything after
@@ -10,12 +10,13 @@
  * `dsh --profile tui --resume abc` boots the tui profile with `--resume abc`,
  * and `dsh --profile web -h` prints the web app's help, not this one's.
  *
- * `dsh <name>` abbreviates `dsh --profile <name>`; `plugin` manages a profile's
- * plugin dependencies by forwarding to pnpm.
- * @module @deepseek-ai/dsh/args
+ * `<name> <profile>` abbreviates `<name> --profile <profile>`; `plugin` manages
+ * a profile's plugin dependencies by forwarding to pnpm.
+ * @module @deepseek-ai/dsh-launcher/args
  */
 
 import { Command, CommanderError, InvalidArgumentError } from 'commander'
+import type { LauncherApplication, ReservedProfileApplication } from './application.ts'
 
 /** Boot a named profile and hand it the invocation's inner arguments. */
 interface ProfileInvocation {
@@ -23,7 +24,7 @@ interface ProfileInvocation {
   profile: string
   /** Shipped template that replaces the named profile. */
   fromDefaultProfile?: string | undefined
-  /** Extra patch-list overlays applied after the profile's own layer, in argv order. */
+  /** Extra patch-list overlays applied after the profile's layer, in argv order. */
   patches: string[]
   /** Everything after the launcher's own flags, verbatim, for injected app plugins. */
   args: string[]
@@ -57,8 +58,12 @@ interface PluginInvocation {
   args: string[]
 }
 
-/** The resolved `dsh` invocation. Help, version, and errors exit inside {@link parseDshArgs}. */
-export type DshInvocation = ProfileInvocation | DumpConfigInvocation | DumpConfigSchemaInvocation | PluginInvocation
+/** The resolved launcher invocation. Help, version, and errors exit inside {@link parseLauncherArgs}. */
+export type LauncherInvocation =
+  | ProfileInvocation
+  | DumpConfigInvocation
+  | DumpConfigSchemaInvocation
+  | PluginInvocation
 
 /** Launcher flags for profile boot and configuration dumps. */
 interface BootOptions {
@@ -80,24 +85,22 @@ function selectProfile(value: string, previous?: string): string {
   return value
 }
 
-function rejectElectronProfile(program: Command, profile: string): void {
-  if (profile.toLowerCase() === 'desktop') {
-    program.error('error: profile "desktop" is managed exclusively by the Electron application')
+/**
+ * Reject a request for a profile the embedding application owns.
+ * @param program - the command whose `error` prints and exits.
+ * @param reserved - the reserved profile, when the application declares one.
+ * @param profile - the requested profile name.
+ */
+function rejectReservedProfile(
+  program: Command,
+  reserved: ReservedProfileApplication | undefined,
+  profile: string,
+): void {
+  if (reserved === undefined) return
+  if (profile.toLowerCase() === reserved.name) {
+    program.error(`error: profile ${JSON.stringify(reserved.name)} is managed exclusively by ${reserved.manager}`)
   }
 }
-
-/** The launcher's own help text; each app prints its own. */
-const HELP_EXAMPLES = `
-Examples:
-  dsh web                                   boot the web profile (same as: dsh --profile web)
-  dsh rescue --from-default-profile web
-                                            recreate rescue from the shipped web template, then boot it
-  dsh headless "run the tests"              answer one task, print the result, and exit
-  dsh tui --patch ./extra.yml               boot a custom profile with one extra overlay
-  dsh tui --resume <session>                arguments after the launcher flags reach the app
-  dsh web --help                            the web app's own flags and help
-  dsh plugin --profile tui add <package>    install a plugin into the tui profile
-`
 
 /**
  * Resolve a boot or dump invocation from the launcher flags and the leftover
@@ -108,7 +111,7 @@ Examples:
  * @param args - the leftover arguments, in argv order.
  * @returns the resolved invocation.
  */
-function resolveBoot(program: Command, profile: string, options: BootOptions, args: string[]): DshInvocation {
+function resolveBoot(program: Command, profile: string, options: BootOptions, args: string[]): LauncherInvocation {
   const patches = options.patch ?? []
   if (patches.includes('')) program.error('error: --patch needs a path')
   if (options.fromDefaultProfile === '') program.error('error: --from-default-profile needs a name')
@@ -138,23 +141,27 @@ function resolveBoot(program: Command, profile: string, options: BootOptions, ar
 /**
  * Resolve argv into one invocation, or print and exit for help, version, or an
  * error.
+ * @param application - the application whose name, version, and reserved profile the grammar uses.
  * @param argv - arguments after the Node binary and script.
- * @param version - version string printed by `--version`.
- * @param manageDesktopProfile - permit Desktop's installed carrier to manage its reserved profile's plugins.
+ * @param manageReservedProfile - permit the reserved profile's installed carrier to manage its plugins.
  * @returns the resolved invocation.
  */
-export function parseDshArgs(argv: readonly string[], version: string, manageDesktopProfile = false): DshInvocation {
+export function parseLauncherArgs(
+  application: LauncherApplication,
+  argv: readonly string[],
+  manageReservedProfile = false,
+): LauncherInvocation {
   const first = argv[0]
-  let resolved: DshInvocation | undefined
+  let resolved: LauncherInvocation | undefined
   // Annotated, not inferred: the actions below call back into `program`, and an
   // inferred type would be circular through its own chain.
   const program: Command = new Command()
   program
-    .name('dsh')
-    .version(version, '-V, --version', 'output the version number')
-    .usage('[--profile] <name> [options] [app-args...]\n       dsh plugin --profile <name> <pnpm-args...>')
-    .description('dsh: boot a DeepSeek Harness profile — an ordered stack of plugin-bundle patch layers under your own overrides.')
-    .addHelpText('after', HELP_EXAMPLES)
+    .name(application.name)
+    .version(application.version(), '-V, --version', 'output the version number')
+    .usage(`[--profile] <name> [options] [app-args...]\n       ${application.name} plugin --profile <name> <pnpm-args...>`)
+    .description(application.description)
+    .addHelpText('after', application.examples ?? '')
     .exitOverride()
     // The launcher's flags come first and end at the first token it does not
     // know; everything from there on belongs to the booted app, including
@@ -164,7 +171,7 @@ export function parseDshArgs(argv: readonly string[], version: string, manageDes
     .allowUnknownOption()
     .passThroughOptions()
     .enablePositionalOptions()
-    .argument('[args...]', 'arguments for the booted profile\'s app (see: dsh --profile <name> --help)')
+    .argument('[args...]', `arguments for the booted profile's app (see: ${application.name} --profile <name> --help)`)
     .option('--profile <name>', 'the profile under $DSH_HOME/profiles to boot', selectProfile)
     .option('--from-default-profile <name>', 'replace a custom profile with a fresh copy of a shipped profile template')
     .option('--patch <path>', 'extra patch-list overlay applied after the profile layer (repeatable)', collect)
@@ -180,7 +187,7 @@ export function parseDshArgs(argv: readonly string[], version: string, manageDes
       }
       const profile = options.profile
       if (profile === '') program.error('error: --profile needs a name')
-      rejectElectronProfile(program, profile)
+      rejectReservedProfile(program, application.reservedProfile, profile)
       resolved = resolveBoot(program, profile, options, args)
     })
 
@@ -196,9 +203,15 @@ export function parseDshArgs(argv: readonly string[], version: string, manageDes
       .argument('[args...]', 'pnpm arguments, forwarded verbatim (add <pkg>, remove <pkg>, why <pkg>, ...)')
       .action((args: string[], options: { profile: string }) => {
         if (options.profile === '') program.error('error: --profile needs a name')
-        if (!manageDesktopProfile) rejectElectronProfile(plugin, options.profile)
+        if (!manageReservedProfile) {
+          rejectReservedProfile(plugin, application.reservedProfile, options.profile)
+        }
         if (args.length === 0) program.error('error: plugin needs pnpm arguments to forward (e.g. add <package>)')
-        resolved = { mode: 'plugin', profile: options.profile.toLowerCase() === 'desktop' ? 'desktop' : options.profile, args }
+        const reserved = application.reservedProfile
+        const profile = reserved !== undefined && options.profile.toLowerCase() === reserved.name
+          ? reserved.name
+          : options.profile
+        resolved = { mode: 'plugin', profile, args }
       })
   }
 
@@ -211,6 +224,6 @@ export function parseDshArgs(argv: readonly string[], version: string, manageDes
     return process.exit(error instanceof CommanderError ? error.exitCode : 1)
   }
   /* v8 ignore next -- an action resolves or Commander throws */
-  if (resolved === undefined) throw new Error('dsh: no invocation resolved')
+  if (resolved === undefined) throw new Error(`${application.name}: no invocation resolved`)
   return resolved
 }

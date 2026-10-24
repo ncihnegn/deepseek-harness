@@ -62,6 +62,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/experimental/client-ui-plugin-recommendations': { kind: 'indirect', reason: 'The plugin card body enables through the Host plugin kind; the Host card service owns the logged tool, decisions and status notice.' },
   'packages/experimental/personalized-recommendations': { kind: 'indirect', reason: 'The bundle composes the card service and both card kinds; their packages own the skills, the logged tool and the status notice.' },
   'packages/experimental/voice-input-bundle': { kind: 'none', reason: 'Composes dictation and preparation plugins without adding any model-facing contribution.' },
+  'packages/boot/launcher': { kind: 'none', reason: 'The launcher resolves the command line and composes the profile before any session exists; mounted rows own every model-visible consequence.' },
   'packages/telemetry/otel': { kind: 'none', reason: 'The service delivers caller-selected records without changing model context.' },
   'packages/host/product-telemetry-otel': { kind: 'none', reason: 'The plugin exports explicit analytics records without contributing model context.' },
   'packages/api/terminal-controller': { kind: 'indirect', reason: 'Working-directory recovery owns directory context; user terminal screens never enter model requests.' },

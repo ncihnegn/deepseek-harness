@@ -32,7 +32,7 @@ describe('startup diagnostic files', () => {
       return true
     })
     onTestFinished(() => { write.mockRestore() })
-    await reportStartupFailure(startupError('failed'), { home: dir, version: '1.2.3', profile: 'web' })
+    await reportStartupFailure(startupError('failed'), { name: 'dsh', home: dir, version: '1.2.3', profile: 'web' })
     expect(write).toHaveBeenCalledWith(expect.stringContaining('dsh: startup failed:'), expect.any(Function))
     expect(write).toHaveBeenCalledWith(expect.stringContaining(`Full diagnostics: ${join(dir, 'logs')}`), expect.any(Function))
   })
@@ -46,7 +46,7 @@ describe('startup diagnostic files', () => {
     })
     onTestFinished(() => { write.mockRestore() })
     let finished = false
-    const report = reportStartupFailure(startupError('failed'), { home: dir, version: '1.2.3', profile: 'web' })
+    const report = reportStartupFailure(startupError('failed'), { name: 'dsh', home: dir, version: '1.2.3', profile: 'web' })
       .then(() => { finished = true })
     expect(pending).toHaveLength(1)
     pending.shift()!()
@@ -64,7 +64,7 @@ describe('startup diagnostic files', () => {
       return false
     })
     onTestFinished(() => { write.mockRestore() })
-    await expect(reportStartupFailure(startupError('failed'), { home: dir, version: '1.2.3', profile: 'web' }))
+    await expect(reportStartupFailure(startupError('failed'), { name: 'dsh', home: dir, version: '1.2.3', profile: 'web' }))
       .rejects.toThrow('stderr closed')
   })
 
@@ -83,7 +83,7 @@ describe('startup diagnostic files', () => {
     const aggregate = new AggregateError([leaf, { transport: 'closed' }], 'activation failed', { cause: leaf })
     const error = startupError(aggregate)
 
-    await reportStartupFailure(error, { home: dir, version: '1.2.3', profile: 'web' }, (text) => { chunks.push(text) })
+    await reportStartupFailure(error, { name: 'dsh', home: dir, version: '1.2.3', profile: 'web' }, (text) => { chunks.push(text) })
 
     const files = await readdir(join(dir, 'logs'))
     expect(files).toHaveLength(1)
@@ -95,7 +95,7 @@ describe('startup diagnostic files', () => {
       'WARNING: Raw diagnostics may contain configuration or credential values from plugin errors. Review before sharing.\n\n',
     )).toBe(true)
     for (const text of [
-      'dshVersion: \'1.2.3\'', "profile: 'web'", process.version, 'configurationPath:', '/example/cordis.yml',
+      "version: '1.2.3'", "profile: 'web'", process.version, 'configurationPath:', '/example/cordis.yml',
       "module: './waiting.mjs'", 'required: false', 'fiberState: 0', "missing: [ 'webServer'", 'messages:',
       'AggregateError: activation failed', '[cause]', '[errors]', 'EADDRINUSE', '[hiddenDetail]',
       'non-enumerable detail', 'Symbol(diagnostic-field)', '42n', '[Circular', large, 'value-104', '[Getter]',
@@ -112,7 +112,7 @@ describe('startup diagnostic files', () => {
   it('creates distinct files for concurrent failures without replacing earlier reports', async () => {
     const dir = await home()
     await Promise.all(['first', 'second'].map(reason => reportStartupFailure(
-      startupError(reason), { home: dir, version: '1.2.3', profile: 'web' }, () => {},
+      startupError(reason), { name: 'dsh', home: dir, version: '1.2.3', profile: 'web' }, () => {},
     )))
     const files = await readdir(join(dir, 'logs'))
     expect(files).toHaveLength(2)
@@ -126,7 +126,7 @@ describe('startup diagnostic files', () => {
     await writeFile(join(dir, 'logs'), 'blocked')
     const chunks: string[] = []
     await reportStartupFailure(startupError({ code: 'CUSTOM', value: 'original details' }), {
-      home: dir, version: '1.2.3', profile: 'web',
+      name: 'dsh', home: dir, version: '1.2.3', profile: 'web',
     }, (text) => { chunks.push(text) })
     const output = chunks.join('')
     expect(output).toContain('dsh: startup failed:')

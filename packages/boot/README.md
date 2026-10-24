@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The boot group launches profile applications and manages their installed composition. `app-boot` resolves configuration and starts the Loader, `cmdline` supplies application arguments, and `plugin-manager` exposes current-profile operations shared with the CLI. Each package README owns its details.
+The boot group launches profile applications and manages their installed composition. `app-boot` resolves configuration and starts the Loader, `cmdline` supplies application arguments, `launcher` runs an application's command line over both, and `plugin-manager` exposes current-profile operations shared with the CLI. Each package README owns its details.
 
 ## Table of Contents
 
@@ -24,6 +24,7 @@ The boot group launches profile applications and manages their installed composi
 |---|---|---|
 | [`app-boot`](app-boot/README.md) | Boots a dsh app from a `cordis.yml`: loads `.env`, applies profile and patch layers, and reports startup failures clearly | (library for the bins) |
 | [`cmdline`](cmdline/README.md) | Lets the app own its flags, `--help`, and exit code; passes everything after the launcher's flags through verbatim | `cmdlineArgs`, `appExit` |
+| [`launcher`](launcher/README.md) | Runs a launcher application's command line: argv grammar, profile boot, plugin management, config dumps, diagnostics, and bounded shutdown | (library for the bins) |
 | [`hmr`](hmr/README.md) | Coordinates module and configuration reloads with package mutations | `hmr` |
 | [`config-editor`](config-editor/README.md) | Persists active profile configuration through Loader reconciliation | `configEditor` |
 | [`plugin-manager`](plugin-manager/README.md) | Manages current-profile plugins and bundle packages through shared CLI operations | `pluginManager` |

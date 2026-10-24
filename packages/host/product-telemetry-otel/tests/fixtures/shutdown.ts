@@ -1,7 +1,7 @@
 /** Product telemetry disposal must leave the Host free to exit naturally. */
 import type {} from '@deepseek-ai/dsh-host-product-telemetry-otel'
 import { bootProductionProfile } from '../../../../test-support/loader-smoke/tests/fixtures/production-profile.ts'
-import { createProcessShutdown } from '../../../../../apps/cli/src/process-shutdown.ts'
+import { createProcessShutdown } from '@deepseek-ai/dsh-launcher'
 
 const configPath = process.argv[2]
 if (configPath === undefined) throw new Error('product telemetry fixture requires an overlay')

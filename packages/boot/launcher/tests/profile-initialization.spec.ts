@@ -15,6 +15,7 @@ import { PROFILE_TEMPLATES } from '@deepseek-ai/dsh-official-bundles'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { execa } from 'execa'
 import { initializeProfileFromDefault } from '../src/profile-boot.ts'
+import { testApplication } from './fixtures/application.ts'
 
 /** Replaces one `renameSync` call when it returns true; the real rename runs otherwise. */
 const renameHook = vi.hoisted(() => ({ current: undefined as ((from: string, to: string) => boolean) | undefined }))
@@ -61,12 +62,15 @@ function withHome(assertion: (home: string) => void): void {
   }
 }
 
+/** The launcher identity every replacement in this file runs with. */
+const application = testApplication()
+
 describe('initializeProfileFromDefault', () => {
   it.each(Object.entries(PROFILE_TEMPLATES))(
     'copies the %s template metadata into an independent profile',
     (source, template) => {
       withHome((home) => {
-        initializeProfileFromDefault('custom', source, home)
+        initializeProfileFromDefault(application, 'custom', source, home)
         const dir = resolveProfileDir('custom', home)
         const manifest = readProfileManifest('test', dir)
         expect(manifest).toEqual({
@@ -90,7 +94,7 @@ describe('initializeProfileFromDefault', () => {
       writeProfileManifest(sourceDir, sourceManifest)
       writeFileSync(join(sourceDir, PROFILE_PATCH_FILENAME), '- id: local-only\n  disabled: true\n')
 
-      initializeProfileFromDefault('rescue', 'web', home)
+      initializeProfileFromDefault(application, 'rescue', 'web', home)
 
       const targetDir = resolveProfileDir('rescue', home)
       const target = readProfileManifest('test', targetDir)
@@ -112,7 +116,7 @@ describe('initializeProfileFromDefault', () => {
       writeFileSync(join(dir, PROFILE_PATCH_FILENAME), '- id: existing\n  disabled: true\n')
       mkdirSync(join(dir, 'node_modules', 'existing-bundle'), { recursive: true })
 
-      initializeProfileFromDefault('rescue', 'web', home)
+      initializeProfileFromDefault(application, 'rescue', 'web', home)
 
       expect(readProfileManifest('test', dir)).toEqual({
         name: 'dsh-profile-rescue',
@@ -132,7 +136,7 @@ describe('initializeProfileFromDefault', () => {
       mkdirSync(dir, { recursive: true })
       writeFileSync(join(dir, 'residual'), '')
 
-      initializeProfileFromDefault('rescue', 'web', home)
+      initializeProfileFromDefault(application, 'rescue', 'web', home)
 
       expect(existsSync(join(dir, 'residual'))).toBe(false)
       expect(readProfileManifest('test', dir).dsh?.profile).toEqual(PROFILE_TEMPLATES.web)
@@ -150,7 +154,7 @@ describe('initializeProfileFromDefault', () => {
       }
 
       expect(() => {
-        initializeProfileFromDefault('rescue', 'web', home)
+        initializeProfileFromDefault(application, 'rescue', 'web', home)
       }).toThrow('rename failed')
       expect(readFileSync(join(dir, 'package.json'))).toEqual(before)
       expect(readdirSync(dirname(dir))).toEqual(['rescue'])
@@ -169,7 +173,7 @@ describe('initializeProfileFromDefault', () => {
 
       let failure: unknown
       try {
-        initializeProfileFromDefault('rescue', 'web', home)
+        initializeProfileFromDefault(application, 'rescue', 'web', home)
       } catch (error) {
         failure = error
       }
@@ -195,7 +199,7 @@ describe('initializeProfileFromDefault', () => {
       }
 
       expect(() => {
-        initializeProfileFromDefault('rescue', 'web', home)
+        initializeProfileFromDefault(application, 'rescue', 'web', home)
       }).toThrow('profile "rescue" was recreated concurrently')
       expect(readProfileManifest('test', dir).dsh?.profile).toEqual({ bundles: ['concurrent-bundle'] })
       expect(readdirSync(dirname(dir))).toEqual(['rescue'])
@@ -209,7 +213,7 @@ describe('initializeProfileFromDefault', () => {
       const before = readFileSync(join(dir, 'package.json'))
 
       expect(() => {
-        initializeProfileFromDefault('Web', 'headless', home)
+        initializeProfileFromDefault(application, 'Web', 'headless', home)
       }).toThrow('profile "Web" names shipped profile "web"')
       expect(readFileSync(join(dir, 'package.json'))).toEqual(before)
     })
@@ -218,7 +222,7 @@ describe('initializeProfileFromDefault', () => {
   it.each(Object.keys(PROFILE_TEMPLATES))('rejects shipped target name %s without creating it', (name) => {
     withHome((home) => {
       expect(() => {
-        initializeProfileFromDefault(name, 'web', home)
+        initializeProfileFromDefault(application, name, 'web', home)
       })
         .toThrow(`names shipped profile ${JSON.stringify(name)}`)
       expect(existsSync(resolveProfileDir(name, home))).toBe(false)
@@ -228,7 +232,7 @@ describe('initializeProfileFromDefault', () => {
   it.each(['unknown', 'toString'])('rejects unknown template %s without creating the target', (source) => {
     withHome((home) => {
       expect(() => {
-        initializeProfileFromDefault('rescue', source, home)
+        initializeProfileFromDefault(application, 'rescue', source, home)
       })
         .toThrow(`unknown default profile ${JSON.stringify(source)}`)
       expect(existsSync(resolveProfileDir('rescue', home))).toBe(false)

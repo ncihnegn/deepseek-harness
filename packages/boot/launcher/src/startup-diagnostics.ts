@@ -7,9 +7,14 @@ import { inspect } from 'node:util'
 import type { StartupError } from '@deepseek-ai/dsh-app-boot'
 
 /** Launcher-owned context; no environment values or plugin configurations are collected. */
-interface StartupDiagnosticContext {
+export interface StartupDiagnosticContext {
+  /** Application name prefixed to terminal warnings. */
+  name: string
+  /** Harness home receiving the report. */
   home: string
+  /** Running application version. */
   version: string
+  /** Selected profile name. */
   profile: string
 }
 
@@ -24,10 +29,10 @@ function writeStderr(text: string): Promise<void> {
 }
 
 /**
- * Print the startup summary and save a private, uniquely named report under DSH_HOME/logs.
+ * Print the startup summary and save a private, uniquely named report under `<home>/logs`.
  * Failed writes print the complete report to stderr instead of claiming a saved path.
  * @param error - startup audit failure retaining plugin metadata and original errors.
- * @param context - resolved Harness home, application version, and selected profile.
+ * @param context - application name, resolved Harness home, version, and selected profile.
  * @param write - terminal output sink; awaited before returning, defaults to stderr.
  * @returns after saving or printing the report and completing terminal writes.
  */
@@ -39,7 +44,7 @@ export async function reportStartupFailure(
   const now = new Date().toISOString()
   const report = 'WARNING: Raw diagnostics may contain configuration or credential values from plugin errors. Review before sharing.\n\n' + inspect({
     timestamp: now,
-    dshVersion: context.version,
+    version: context.version,
     nodeVersion: process.version,
     platform: process.platform,
     arch: process.arch,
@@ -61,7 +66,7 @@ export async function reportStartupFailure(
     await mkdir(logDir, { recursive: true, mode: 0o700 })
     await writeFile(logPath, report, { flag: 'wx', mode: 0o600 })
   } catch (writeError) {
-    await write(`\ndsh: warning: could not write startup diagnostics: ${String(writeError)}\nFull diagnostics:\n${report}`)
+    await write(`\n${context.name}: warning: could not write startup diagnostics: ${String(writeError)}\nFull diagnostics:\n${report}`)
     return
   }
   await write(`\nFull diagnostics: ${logPath}\n`)

@@ -7,8 +7,11 @@ import { getDshRuntimeVersion, initProfile, readProfileVersionExemptions } from 
 import { PROFILE_TEMPLATES } from '@deepseek-ai/dsh-official-bundles'
 import { runPluginCommand, runProfilePnpm } from '@deepseek-ai/dsh-plugin-manager/operations'
 import { runPlugin } from '../src/plugin.ts'
+import { testApplication } from './fixtures/application.ts'
 
-vi.mock('../src/profile-boot.ts', () => ({ INSTALL_ANCHOR: '/installation/package.json' }))
+/** The installation anchor every package operation must report. */
+const application = testApplication({ installAnchor: '/installation/package.json' })
+
 vi.mock('@deepseek-ai/dsh-plugin-manager/operations', async importOriginal => ({
   ...await importOriginal<typeof import('@deepseek-ai/dsh-plugin-manager/operations')>(),
   runPluginCommand: vi.fn(),
@@ -33,7 +36,7 @@ function fixture() {
 it('requires explicit acknowledgement, grants only the exact pair, lists and revokes it without pnpm', async () => {
   const { dir, stdout, stderr } = fixture()
   const runtime = getDshRuntimeVersion()
-  expect(await runPlugin('test', ['allow-version', '@example/plugin@1.2.3', '--dsh-version', runtime, '--accept-risk'])).toBe(0)
+  expect(await runPlugin(application, 'test', ['allow-version', '@example/plugin@1.2.3', '--dsh-version', runtime, '--accept-risk'])).toBe(0)
   expect(stderr.mock.calls.map(call => call[0]).join('')).toMatchInlineSnapshot(`
     "dsh: warning: allowing incompatible plugin versions can break the application or corrupt data. Approval applies only to the exact package and DSH versions.
     "
@@ -41,9 +44,9 @@ it('requires explicit acknowledgement, grants only the exact pair, lists and rev
   expect(stderr.mock.invocationCallOrder[0]).toBeLessThan(stdout.mock.invocationCallOrder[0]!)
   expect(readProfileVersionExemptions(dir)).toEqual({ '@example/plugin@1.2.3': [runtime] })
   expect(JSON.parse(readFileSync(join(dir, 'compatibility.json'), 'utf8'))).toEqual({ '@example/plugin@1.2.3': [runtime] })
-  expect(await runPlugin('test', ['version-exemptions'])).toBe(0)
+  expect(await runPlugin(application, 'test', ['version-exemptions'])).toBe(0)
   expect(stdout).toHaveBeenLastCalledWith(JSON.stringify({ '@example/plugin@1.2.3': [runtime] }, undefined, 2) + '\n')
-  expect(await runPlugin('test', ['revoke-version', '@example/plugin@1.2.3', `--dsh-version=${runtime}`])).toBe(0)
+  expect(await runPlugin(application, 'test', ['revoke-version', '@example/plugin@1.2.3', `--dsh-version=${runtime}`])).toBe(0)
   expect(readProfileVersionExemptions(dir)).toEqual({})
   expect(runPluginCommand).not.toHaveBeenCalled()
 })
@@ -60,7 +63,7 @@ it.each([
 ])('rejects malformed or unacknowledged exemption command %j', async (...arguments_) => {
   const { dir, stderr } = fixture()
   const args = arguments_.map(value => value === 'CURRENT' ? getDshRuntimeVersion() : value)
-  expect(await runPlugin('test', args)).toBe(1)
+  expect(await runPlugin(application, 'test', args)).toBe(1)
   expect(stderr).toHaveBeenCalled()
   expect(existsSync(join(dir, 'compatibility.json'))).toBe(false)
   expect(runPluginCommand).not.toHaveBeenCalled()
@@ -68,7 +71,7 @@ it.each([
 
 it('uses shipped profile defaults when listing a missing profile', async () => {
   fixture()
-  expect(await runPlugin('web', ['version-exemptions'])).toBe(0)
+  expect(await runPlugin(application, 'web', ['version-exemptions'])).toBe(0)
   expect(runPluginCommand).not.toHaveBeenCalled()
 })
 
@@ -78,7 +81,7 @@ it.each([0, 1])('forwards ordinary pnpm output and exit status %s', async (exitC
     options.onOutput?.('pnpm output', 'stdout')
     return { exitCode, output: '', truncated: false, logPath: '/profile/log' }
   })
-  expect(await runPlugin('test', ['list'])).toBe(exitCode)
+  expect(await runPlugin(application, 'test', ['list'])).toBe(exitCode)
   expect(stdout).toHaveBeenCalledWith('pnpm output')
   if (exitCode === 0) expect(stderr).not.toHaveBeenCalled()
   else expect(stderr).toHaveBeenCalledWith('dsh: plugin command failed; diagnostics: /profile/log\n')
@@ -90,7 +93,7 @@ it('names the exact grant command for each package a compatibility check refused
     exitCode: 1, output: '', truncated: false, logPath: '/profile/log',
     incompatible: [{ name: '@example/plugin', version: '1.2.3', runtimeVersion: '0.1.0', requirements: { '@deepseek-ai/dsh': '^9.0.0' } }],
   })
-  expect(await runPlugin('test', ['add', '@example/plugin'])).toBe(1)
+  expect(await runPlugin(application, 'test', ['add', '@example/plugin'])).toBe(1)
   expect(stderr.mock.calls.map(call => call[0])).toEqual([
     'dsh: to accept the risk, run: dsh plugin --profile test allow-version @example/plugin@1.2.3 --dsh-version 0.1.0 --accept-risk\n',
     'dsh: plugin command failed; diagnostics: /profile/log\n',
@@ -101,7 +104,7 @@ it('forwards all other commands unchanged and retains package diagnostics', asyn
   const { stderr } = fixture()
   vi.mocked(runPluginCommand).mockResolvedValue({ exitCode: 127, output: '', truncated: false, logPath: '/profile/log' })
   const args = ['add', 'github:example/plugin']
-  expect(await runPlugin('test', args)).toBe(127)
+  expect(await runPlugin(application, 'test', args)).toBe(127)
   expect(runPluginCommand).toHaveBeenCalledWith(expect.objectContaining({ profile: 'test' }), args, expect.objectContaining({ execution: 'cli' }))
   expect(stderr.mock.calls.map(call => call[0]).join('')).toContain('pnpm was not found')
 })
@@ -114,7 +117,7 @@ it('uses the installation package runtime without changing CLI authentication or
     args: ['--expose-internals', '/installation/pnpm.mjs'],
     env: { ELECTRON_RUN_AS_NODE: '1', PATH: '/installation/bin' },
   }
-  expect(await runPlugin('test', ['list'], packageManager)).toBe(0)
+  expect(await runPlugin(application, 'test', ['list'], packageManager)).toBe(0)
   expect(runPluginCommand).toHaveBeenCalledWith(
     expect.objectContaining({ profile: 'test' }), ['list'],
     expect.objectContaining({ ...packageManager, execution: 'cli' }),
@@ -129,7 +132,7 @@ it.each([
 ])('requires Desktop initialization before %j without creating a profile', async (...arguments_) => {
   const { home, stderr } = fixture()
   const args = arguments_.map(value => value === 'CURRENT' ? getDshRuntimeVersion() : value)
-  expect(await runPlugin('desktop', args)).toBe(1)
+  expect(await runPlugin(application, 'desktop', args)).toBe(1)
   expect(stderr.mock.calls.map(call => call[0]).join('')).toMatchInlineSnapshot(`
     "dsh: Error: Open DeepSeek Harness Desktop once to initialize its profile, then fully quit it before running dsh plugin --profile desktop.
     "
@@ -152,7 +155,7 @@ it('runs Desktop package operations under the shared writer lock with bundled pn
     expect(existsSync(join(dir, 'package.json.lock'))).toBe(true)
     return { exitCode: 0, output: '', truncated: false, logPath: '/profile/log' }
   })
-  expect(await runPlugin('desktop', ['list'], packageManager)).toBe(0)
+  expect(await runPlugin(application, 'desktop', ['list'], packageManager)).toBe(0)
   expect(runProfilePnpm).toHaveBeenCalledOnce()
   expect(runPluginCommand).not.toHaveBeenCalled()
   expect(existsSync(join(dir, 'package.json.lock'))).toBe(false)
@@ -166,10 +169,10 @@ it('applies version approvals to the existing Desktop profile without replacing 
   initProfile(dir, PROFILE_TEMPLATES.web!.bundles)
   const manifest = readFileSync(join(dir, 'package.json'), 'utf8')
   const runtime = getDshRuntimeVersion()
-  expect(await runPlugin('desktop', ['allow-version', 'example-plugin@1.2.3', '--dsh-version', runtime, '--accept-risk'])).toBe(0)
+  expect(await runPlugin(application, 'desktop', ['allow-version', 'example-plugin@1.2.3', '--dsh-version', runtime, '--accept-risk'])).toBe(0)
   expect(readProfileVersionExemptions(dir)).toEqual({ 'example-plugin@1.2.3': [runtime] })
-  expect(await runPlugin('desktop', ['version-exemptions'])).toBe(0)
-  expect(await runPlugin('desktop', ['revoke-version', 'example-plugin@1.2.3', '--dsh-version', runtime])).toBe(0)
+  expect(await runPlugin(application, 'desktop', ['version-exemptions'])).toBe(0)
+  expect(await runPlugin(application, 'desktop', ['revoke-version', 'example-plugin@1.2.3', '--dsh-version', runtime])).toBe(0)
   expect(readProfileVersionExemptions(dir)).toEqual({})
   expect(readFileSync(join(dir, 'package.json'), 'utf8')).toBe(manifest)
   expect(existsSync(join(dir, 'package.json.lock'))).toBe(false)

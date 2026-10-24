@@ -667,9 +667,11 @@ function main(): void {
   const mode = args.includes('--apply') ? 'apply' : args.includes('--check') ? 'check' : 'dry'
   const reverse = args.includes('--reverse')
   const all = patterns(reverse)
-  const files = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
+  const files = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
     .split('\0')
-    .filter(file => file !== '' && !isRescopeExcluded(file))
+    // A file deleted in the working tree is still listed until the deletion is staged, and it
+    // has no text left to carry a pre-rescope name.
+    .filter(file => file !== '' && !isRescopeExcluded(file) && existsSync(resolve(root, file)))
 
   const counts = new Map<string, { files: number; lines: number }>()
   const failures: string[] = []

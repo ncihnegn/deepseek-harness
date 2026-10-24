@@ -503,6 +503,7 @@
     { "path": "./packages/util/official-bundles" },
     { "path": "./packages/boot/app-boot" },
     { "path": "./packages/boot/cmdline" },
+    { "path": "./packages/boot/launcher" },
     { "path": "./packages/sdk/server" },
     { "path": "./packages/test-support/llm-replay" },
     { "path": "./packages/typert/generator" },

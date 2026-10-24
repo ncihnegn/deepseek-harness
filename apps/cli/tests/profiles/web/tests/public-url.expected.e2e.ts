@@ -12,7 +12,7 @@ import { execa } from 'execa'
 import { describe, expect, it } from 'vitest'
 import { probeNonLoopbackIpv4, probeZonedLoopback } from '../../../../../../scripts/test-non-loopback-address.ts'
 import { startPrefixProxy } from '../../../../../../apps/web/tests/prefix-proxy.ts'
-import { PROCESS_SHUTDOWN_TIMEOUT_MS } from '../../../../src/process-shutdown.ts'
+import { PROCESS_SHUTDOWN_TIMEOUT_MS } from '@deepseek-ai/dsh-launcher'
 import { materializeTlsFixture } from '../../../../../../packages/host/webserver/tests/tls-fixture.ts'
 
 const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))

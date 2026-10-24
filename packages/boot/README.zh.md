@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-boot 组负责启动 profile 应用并管理其已安装组合。`app-boot` 解析配置并启动 Loader，`cmdline` 提供应用参数，`plugin-manager` 提供与 CLI 共享的当前 profile 操作。各包 README 负责各自的细节。
+boot 组负责启动 profile 应用并管理其已安装组合。`app-boot` 解析配置并启动 Loader，`cmdline` 提供应用参数，`launcher` 在两者之上运行应用的命令行，`plugin-manager` 提供与 CLI 共享的当前 profile 操作。各包 README 负责各自的细节。
 
 ## 目录
 
@@ -24,6 +24,7 @@ boot 组负责启动 profile 应用并管理其已安装组合。`app-boot` 解�
 |---|---|---|
 | [`app-boot`](app-boot/README.zh.md) | 从 `cordis.yml` 启动 dsh 应用：加载 `.env`、应用 profile 与 patch 层，并清晰报告启动失败 | （供各 bin 使用的库） |
 | [`cmdline`](cmdline/README.zh.md) | 让应用持有自己的 flag、`--help` 与退出码；启动器自身 flag 之后的一切原样传入 | `cmdlineArgs`、`appExit` |
+| [`launcher`](launcher/README.zh.md) | 运行启动器应用的命令行：参数语法、profile 启动、插件管理、配置导出、诊断与有界关停 | （供各 bin 使用的库） |
 | [`hmr`](hmr/README.zh.md) | 协调模块与配置重载，并与包修改互斥执行 | `hmr` |
 | [`config-editor`](config-editor/README.zh.md) | 通过 Loader 应用并持久化当前 profile 配置 | `configEditor` |
 | [`plugin-manager`](plugin-manager/README.zh.md) | 通过共享 CLI 操作管理当前 profile 插件与组合包 | `pluginManager` |

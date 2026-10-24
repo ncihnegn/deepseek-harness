@@ -27,6 +27,9 @@
       "path": "../../packages/boot/cmdline"
     },
     {
+      "path": "../../packages/boot/launcher"
+    },
+    {
       "path": "../../packages/bundle/base"
     },
     {

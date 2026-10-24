@@ -3,6 +3,7 @@
 import { existsSync, writeFileSync } from 'node:fs'
 import { setTimeout as delay } from 'node:timers/promises'
 import { initializeProfileFromDefault } from '../../src/profile-boot.ts'
+import { testApplication } from './application.ts'
 
 const [home, name, source, ready, gate] = process.argv.slice(2)
 if (home === undefined || name === undefined || source === undefined || ready === undefined || gate === undefined) {
@@ -15,4 +16,4 @@ while (!existsSync(gate)) {
   if (Date.now() >= deadline) throw new Error(`profile initialization fixture timed out waiting for ${gate}`)
   await delay(20)
 }
-initializeProfileFromDefault(name, source, home)
+initializeProfileFromDefault(testApplication(), name, source, home)

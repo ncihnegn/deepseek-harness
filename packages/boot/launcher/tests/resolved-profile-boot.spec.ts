@@ -12,6 +12,10 @@ import {
 import { installProxyFromEnvironment } from '@deepseek-ai/dsh-http-proxy'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runProfile } from '../src/profile-boot.ts'
+import { testApplication } from './fixtures/application.ts'
+
+/** The launcher identity these boots run with. */
+const launcherApplication = testApplication()
 
 vi.mock('@deepseek-ai/dsh-app-boot', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@deepseek-ai/dsh-app-boot')>()
@@ -65,7 +69,7 @@ describe('runProfile with an application-owned profile', () => {
       patches: [], layers: [],
     }
     try {
-      const application = runProfile({
+      const application = runProfile(launcherApplication, {
         environment: createLaunchEnvironmentSnapshot([]), profile: 'desktop', patchFiles: [], args: ['--no-open'],
         resolvedProfile: { profile, installAnchor: join(home, 'runtime/package.json') },
       })
@@ -135,7 +139,7 @@ describe('runProfile with an application-owned profile', () => {
     const environment = createLaunchEnvironmentSnapshot([{ source: 'process', values: { HTTPS_PROXY: 'http://localhost:8080' } }])
     const runtime = { profile, installAnchor: join(home, 'runtime/package.json') }
     try {
-      const { shutdown } = await runProfile({
+      const { shutdown } = await runProfile(launcherApplication, {
         environment, profile: 'desktop', resolvedProfile: runtime,
         patchFiles: [overlay], args: ['--port', '0', '--no-open'],
       })

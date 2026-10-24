@@ -11,7 +11,7 @@ import { resolveExampleLaunch } from '@deepseek-ai/dsh-loader-smoke'
 import ts from 'typescript'
 import { expect } from 'vitest'
 import type { TestContext } from 'vitest'
-import { PROCESS_SHUTDOWN_TIMEOUT_MS } from '../../../../src/process-shutdown.ts'
+import { PROCESS_SHUTDOWN_TIMEOUT_MS } from '@deepseek-ai/dsh-launcher'
 import type { RuntimeRoster } from './runtime-roster.ts'
 
 const repoRoot = fileURLToPath(new URL('../../../../../../', import.meta.url))

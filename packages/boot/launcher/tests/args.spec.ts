@@ -1,15 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseDshArgs } from '../src/args.ts'
+import { parseLauncherArgs } from '../src/args.ts'
+import { testApplication } from './fixtures/application.ts'
 
-const parse = (argv: string[], manageDesktopProfile = false) => parseDshArgs(argv, '1.2.3', manageDesktopProfile)
+/** The launcher identity this grammar runs with. */
+const application = testApplication({ version: () => '1.2.3' })
+
+const parse = (argv: string[], manageReservedProfile = false) => parseLauncherArgs(application, argv, manageReservedProfile)
 
 /** Capture the process exit code while muting Commander's output. */
-function exitCode(argv: string[], manageDesktopProfile = false): number {
+function exitCode(argv: string[], manageReservedProfile = false): number {
   const exit = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit') })
   vi.spyOn(process.stdout, 'write').mockReturnValue(true)
   vi.spyOn(process.stderr, 'write').mockReturnValue(true)
   try {
-    parse(argv, manageDesktopProfile)
+    parse(argv, manageReservedProfile)
     throw new Error(`expected ${JSON.stringify(argv)} to exit`)
   } catch {
     return exit.mock.calls.at(-1)?.[0] as number
@@ -20,7 +24,7 @@ function exitCode(argv: string[], manageDesktopProfile = false): number {
 
 afterEach(() => { vi.restoreAllMocks() })
 
-describe('parseDshArgs', () => {
+describe('parseLauncherArgs', () => {
   it('routes profile boots and shorthand, handing the rest to the app', () => {
     expect(parse(['--profile', 'tui'])).toEqual({ mode: 'profile', profile: 'tui', patches: [], args: [] })
     expect(parse(['--profile', 'tui', '--patch', 'a.yml', '--patch', 'b.yml']))

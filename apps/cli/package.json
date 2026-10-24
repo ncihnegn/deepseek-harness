@@ -46,6 +46,7 @@
     "@deepseek-ai/dsh-headless": "workspace:*",
     "@deepseek-ai/dsh-home-paths": "workspace:*",
     "@deepseek-ai/dsh-jobs-local": "workspace:*",
+    "@deepseek-ai/dsh-launcher": "workspace:*",
     "@deepseek-ai/dsh-launch-environment": "workspace:*",
     "@deepseek-ai/dsh-mcp-client": "workspace:*",
     "@deepseek-ai/dsh-official-bundles": "workspace:*",

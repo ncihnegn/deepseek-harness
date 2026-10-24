@@ -1,0 +1,43 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/boot/launcher/README.md
+/:
+  en: 067735b8d724a07b
+  zh: 6871a44b6b4a4c0c
+/deepseek-ai-dsh-launcher:
+  en: 43f895dfa003dd2e
+  zh: 111d9311fd859b5e
+/deepseek-ai-dsh-launcher/summary:
+  en: 6365f5b2ba9b625d
+  zh: aa3e751267f1ad9a
+/deepseek-ai-dsh-launcher/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-launcher/use-this-package:
+  en: eadd69bbf99b9943
+  zh: 040d468059d910d0
+/deepseek-ai-dsh-launcher/understand-the-implementation:
+  en: 42b15ac6321706aa
+  zh: 7ae097f3abcc5d9c
+/deepseek-ai-dsh-launcher/understand-the-implementation/design-notes:
+  en: cb41b877866fc22c
+  zh: 5d8a475adaf9ec91
+/deepseek-ai-dsh-launcher/understand-the-implementation/source-map:
+  en: 435b6d3587387d2c
+  zh: 2b7489b230202c59
+/deepseek-ai-dsh-launcher/further-exploration:
+  en: 72331a8cc0aaae5f
+  zh: bcd7fa55060153f8
+/deepseek-ai-dsh-launcher/model-experience:
+  en: 10ae473587affa0d
+  zh: a79738d81efb9f84
+/deepseek-ai-dsh-launcher/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: f57cc48a1b5cbfa9
+/deepseek-ai-dsh-launcher/known-limitations-and-deferred-work:
+  en: 64930961f52c3584
+  zh: d798d164e6140326
+/deepseek-ai-dsh-launcher/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea
